@@ -54,9 +54,3 @@ jobs:
         print('FastAPI app imported successfully!')
         print(f'App routes: {[route.path for route in app.app.routes]}')
         "
-    
-    - name: Upload model as artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: iris-model
-        path: mlops/iris_model.pkl
