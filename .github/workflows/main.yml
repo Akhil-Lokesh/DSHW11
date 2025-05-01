@@ -38,7 +38,7 @@ jobs:
         import numpy as np
         
         # Verify model exists
-        model_path = os.path.join(os.path.dirname(os.path.abspath('__file__')), 'iris_model.pkl')
+        model_path = os.path.join(os.path.dirname(os.path.abspath('__file__')), 'model.pkl')
         assert os.path.exists(model_path), 'Model file not found'
         
         # Load model and test prediction
@@ -64,7 +64,7 @@ jobs:
         "
         
     - name: Upload model artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: iris-model
-        path: ./mlops/iris_model.pkl 
+        path: ./mlops/model.pkl

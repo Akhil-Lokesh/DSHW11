@@ -7,82 +7,88 @@ import os
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="ML Prediction API",
-    description="A simple prediction API using FastAPI",
+    title="Iris Classification API",
+    description="A simple API for Iris flower classification",
     version="1.0.0"
 )
 
-# Check if model file exists, this will help in CI pipeline
-model_path = os.path.join(os.path.dirname(__file__), "model.pkl")
-if not os.path.exists(model_path):
-    raise FileNotFoundError(f"Model file not found at {model_path}")
+# Define the model path
+model_path = os.path.join(os.path.dirname(__file__), "iris_model.pkl")
 
 # Load the model
 try:
     model = joblib.load(model_path)
-    print("Model loaded successfully!")
+    print(f"Model loaded successfully from {model_path}")
 except Exception as e:
     print(f"Error loading model: {e}")
     raise
 
-# Define input data model
+# Define input data model based on Iris features
 class IrisFeatures(BaseModel):
     sepal_length: float
     sepal_width: float
     petal_length: float
     petal_width: float
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "sepal_length": 5.1,
+                "sepal_width": 3.5,
+                "petal_length": 1.4,
+                "petal_width": 0.2
+            }
+        }
 
-# Define prediction response model
+# Define output model for predictions
 class PredictionResponse(BaseModel):
     prediction: int
-    predicted_class: str
-    confidence: float
+    species: str
+    probability: float
 
-# Mapping for iris class names
-class_names = {
-    0: "Setosa",
-    1: "Versicolor",
-    2: "Virginica"
+# Map numeric predictions to species names
+SPECIES_MAP = {
+    0: "setosa",
+    1: "versicolor",
+    2: "virginica"
 }
 
+# Root endpoint
 @app.get("/")
-def read_root():
-    return {"message": "ML Prediction API is running. Use /predict endpoint for predictions."}
+async def root():
+    return {"message": "Welcome to the Iris Classification API. Use /predict endpoint to make predictions."}
 
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "model_loaded": model is not None}
+
+# Prediction endpoint
 @app.post("/predict", response_model=PredictionResponse)
-def predict(features: IrisFeatures):
+async def predict(features: IrisFeatures):
     try:
-        # Convert input to numpy array
-        input_data = np.array([
+        # Convert input features to numpy array
+        data = np.array([[
             features.sepal_length,
             features.sepal_width,
             features.petal_length,
             features.petal_width
-        ]).reshape(1, -1)
+        ]])
         
         # Make prediction
-        prediction = int(model.predict(input_data)[0])
+        prediction = int(model.predict(data)[0])
+        probabilities = model.predict_proba(data)[0]
+        max_probability = float(max(probabilities))
         
-        # Get prediction probabilities if model supports it
-        try:
-            probabilities = model.predict_proba(input_data)[0]
-            confidence = float(probabilities[prediction])
-        except:
-            confidence = 1.0  # Default confidence if predict_proba not available
-        
-        # Return prediction with class name and confidence
+        # Return prediction result
         return {
             "prediction": prediction,
-            "predicted_class": class_names[prediction],
-            "confidence": confidence
+            "species": SPECIES_MAP[prediction],
+            "probability": max_probability
         }
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
-@app.get("/health")
-def health_check():
-    """Health check endpoint for CI verification"""
-    return {"status": "ok"}
-
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True) 
