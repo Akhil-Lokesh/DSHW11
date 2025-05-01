@@ -64,7 +64,7 @@ jobs:
         "
         
     - name: Upload model artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v1
       with:
         name: iris-model
         path: ./mlops/iris_model.pkl
